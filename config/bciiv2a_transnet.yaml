@@ -1,0 +1,33 @@
+# Model
+network: TransNet
+network_args: 
+  num_classes: 4
+  num_samples: 1000
+  num_channels: 22
+  embed_dim: 32
+  pool_size: 50
+  pool_stride: 15
+  num_heads: 8
+  fc_ratio: 4
+  depth: 4
+  attn_drop: 0.5
+  fc_drop: 0.5
+
+# Data
+data_path: /data2/maxinzhi/bci/Dataset/bci_iv_2a
+out_folder: output/bci_iv_2a
+
+# Training
+preferred_device: gpu
+nGPU: 0
+random_seed: 0
+
+batch_size: 10
+
+epochs: 2000
+
+lr: 0.0002
+
+# Data augmentation
+num_classes: 4
+num_segs: 8

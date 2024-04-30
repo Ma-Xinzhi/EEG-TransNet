@@ -1,0 +1,33 @@
+# Model
+network: TransNet
+network_args: 
+  num_classes: 4
+  num_samples: 1000
+  num_channels: 44
+  embed_dim: 32
+  pool_size: 80
+  pool_stride: 15
+  num_heads: 8
+  fc_ratio: 4
+  depth: 4
+  attn_drop: 0.5
+  fc_drop: 0.5
+
+# Data
+data_path: /data2/maxinzhi/bci/Dataset/HGD
+out_folder: output/HGD
+
+# Training
+preferred_device: gpu
+nGPU: 0
+random_seed: 0
+
+batch_size: 250
+
+epochs: 2000
+
+lr: 0.0002
+
+# Data augmentation
+num_classes: 4
+num_segs: 8
