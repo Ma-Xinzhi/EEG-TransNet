@@ -40,7 +40,7 @@ for file in data_files:
 
     picks = mne.pick_types(raw_data.info, eeg=True, exclude='bads')
 
-    tmin, tmax = -0.5, 4
+    tmin, tmax = 0, 4
 
     # left_hand = 769, right_hand = 770, foot = 771, tongue = 772
     # event_id = dict({'769':7, '770':8, '771':9, '772':10})
