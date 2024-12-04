@@ -5,7 +5,7 @@ from mne import label
 from mne.io.fiff import raw
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy.io
+import scipy.io as io
 import os
 import time
 
@@ -13,10 +13,10 @@ factor_new = 1e-3
 init_block_size = 1000
 
 data_path = 'E:/Dataset/BCI_Competition_IV/Datasets2b'
-data_files = [['B0'+str(i)+'0'+str(j)+'E.gdf' for j in range(4,6)] for i in range(1,10)]
+all_data_files = [['B0'+str(i)+'0'+str(j)+'E.gdf' for j in range(4,6)] for i in range(1,10)]
 
 label_path = 'E:/Dataset/BCI_Competition_IV/True_Labels/Datasets2b'
-label_files = [['B0'+str(i)+'0'+str(j)+'E.mat' for j in range(4,6)] for i in range(1,10)]
+all_label_files = [['B0'+str(i)+'0'+str(j)+'E.mat' for j in range(4,6)] for i in range(1,10)]
 
 save_path = 'dataset/bci_iv_2b/raw'
 
@@ -25,47 +25,54 @@ if not os.path.exists(save_path):
 
 event_description = {'783':"CueUnknown"}
 
-for file in data_files:
-    raw_data = mne.io.read_raw_gdf(os.path.join(data_path, file), preload=True, verbose=False)
+for sub in range(1, 10):
+    print(f'Processing Subject {sub}'.format(sub))
+    data_files = all_data_files[sub-1]
+    label_files = all_label_files[sub-1]
+    sub_data = []
+    sub_labels = []
+    for i in range(len(data_files)):
+        raw_data = mne.io.read_raw_gdf(os.path.join(data_path, data_files[i]), preload=True, verbose=False)
+    
+        raw_events, all_event_id = mne.events_from_annotations(raw_data)
 
-    # print(raw_data)
+        raw_data = mne.io.RawArray(raw_data.get_data()*1e6, raw_data.info)
 
-    raw_events, all_event_id = mne.events_from_annotations(raw_data)
-    # print(raw_events)
+        # 滤波4-38Hz
+        # start = time.time()
+        # raw_data.filter(4, 38, fir_design='firwin')
+        # end = time.time()
+        # print("Cost: ", end-start)
 
-    raw_data = mne.io.RawArray(raw_data.get_data()*1e6, raw_data.info)
+        raw_data.info['bads'] += ['EOG:ch01', 'EOG:ch02', 'EOG:ch03']
 
-    # 滤波4-38Hz
-    # start = time.time()
-    # raw_data.filter(4, 38, fir_design='firwin')
-    # end = time.time()
-    # print("Cost: ", end-start)
+        picks = mne.pick_types(raw_data.info, eeg=True, exclude='bads')
 
-    raw_data.info['bads'] += ['EOG-left', 'EOG-central', 'EOG-right']
+        tmin, tmax = 0, 4
 
-    test_picks = mne.pick_types(raw_data.info, eeg=True, exclude='bads')
+        event_id = dict()
 
-    tmin, tmax = 0, 4
+        for event in all_event_id:
+            if event in event_description:
+                event_id[event_description[event]] = all_event_id[event]
 
-    # Unknown = 783
-    # event_id = dict({'783':7})
-    event_id = dict()
-    for event in all_event_id:
-        if event in event_description:
-            event_id[event] = all_event_id[event]
+        raw_epochs = mne.Epochs(raw_data, raw_events, event_id, tmin, tmax, proj=True, picks=picks, baseline=None, preload=True)
 
-    raw_epochs = mne.Epochs(raw_data, raw_events, event_id, tmin, tmax, proj=True, picks=test_picks, baseline=None, preload=True)
+        data = raw_epochs.get_data() # [n_epochs, n_channels, n_times]
+        data = data[:, :, :-1]
+        print(data.shape)
 
-    # print(test_epochs)
+        true_labels = io.loadmat(os.path.join(label_path, label_files[i]))['classlabel']
+        print(true_labels.shape)
 
-    data = raw_epochs.get_data() # [n_epochs, n_channels, n_times]
-    # print(data.shape)
-    data = data[:, :, :-1]
+        sub_data.append(data)
+        sub_labels.extend(true_labels)
+    
+    sub_data = np.concatenate(sub_data, axis=0)
+    sub_labels = np.array(sub_labels)
 
-    np.save(os.path.join(save_path, file[:-4]+'_data.npy'), data)
+    print('Data shape', sub_data.shape)
+    print('Label shape', sub_labels.shape)
 
-for file in label_files:
-    true_label = scipy.io.loadmat(os.path.join(label_path, file))
-    label = true_label['classlabel']
-    np.save(os.path.join(save_path, file[:-4]+'_label.npy'), label)
-
+    np.save(os.path.join(save_path, 'B0'+str(sub)+'E_data.npy'), sub_data)
+    np.save(os.path.join(save_path, 'B0'+str(sub)+'E_label.npy'), sub_labels)
